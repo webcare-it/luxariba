@@ -20,7 +20,7 @@
                         <div class="header-top-right-item-link">
                             <span class="icon-outer">
                                 <i class="fas fa-cart-plus"></i>
-                                <span class="count-number">{{$carts->count()}}</span>
+                                <span class="count-number" id="cart-count-badge" data-cart-count>{{$carts->count()}}</span>
                             </span>
                             Cart
                         </div>
@@ -83,7 +83,7 @@
                              </form>
                             @endif
                         </li>
-                        
+
                     </ul>
                 </div>
             </div>

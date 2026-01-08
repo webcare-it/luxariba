@@ -378,6 +378,11 @@
                 btnText.textContent = 'Added to Cart ✓';
                 cartBtn.style.backgroundColor = '#28a745';
 
+                // Update cart count in header
+                if (data.cartCount) {
+                    updateCartCount(data.cartCount);
+                }
+
                 // Show success message
                 showNotification('Product added to cart successfully!', 'success');
 
@@ -397,6 +402,21 @@
             cartBtn.disabled = false;
             showNotification('Error adding to cart: ' + error.message, 'error');
         });
+    }
+
+    // Update cart count in header
+    function updateCartCount(cartCount) {
+        // Update the cart count badge
+    // Update cart count in header
+    function updateCartCount(cartCount) {
+        // Find cart count badge by ID
+        var cartBadge = document.getElementById('cart-count-badge');
+        if (cartBadge) {
+            cartBadge.textContent = cartCount;
+            console.log('Cart count updated to:', cartCount);
+        } else {
+            console.warn('Cart count badge not found');
+        }
     }
 
     // Notification function
