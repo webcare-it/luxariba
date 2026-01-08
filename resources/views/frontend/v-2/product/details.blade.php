@@ -355,6 +355,9 @@
         // Get form data
         var formData = new FormData(document.getElementById('addToCartForm'));
 
+        // Manually add the action field since submit button value isn't auto-included
+        formData.append('action', 'addToCart');
+
         console.log('Form data being sent:', Object.fromEntries(formData));
 
         // Send AJAX request
