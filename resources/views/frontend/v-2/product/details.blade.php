@@ -90,7 +90,7 @@
                                                     </a>
                                                 </div>
                                                 <div>
-                                                    <button type="submit" name="action" value="addToCart" id="addToCart" class="cart-btn-inner add-to-cart-btn">
+                                                    <button type="submit" name="action" value="addToCart" id="addToCart" class="cart-btn-inner add-to-cart-btn" style="background-color: red!important;">
                                                         <i class="fas fa-shopping-cart"></i>
                                                         <span id="cartBtnText">Add to Cart</span>
                                                     </button>
