@@ -118,105 +118,144 @@ class CartController extends Controller
     }
     public function addToCartDetailsPage(Request $request, $id)
     {
-        //Check Previos Cart Product Type...
-        $ip_address = $request->ip();
-        $cartProducts = Cart::where('ip_address', $ip_address)->get();
-        $lastCartProduct = Cart::where('ip_address', $ip_address)->with('product')->orderBy('id', 'desc')->first();
-        $currentCartProduct = Product::find($id);
+        try {
+            // Validate required fields
+            $validated = $request->validate([
+                'product_id' => 'required|exists:products,id',
+                'qty' => 'required|numeric|min:1',
+                'price' => 'required|numeric',
+                'action' => 'required|in:addToCart,buyNow',
+            ]);
 
-        if($cartProducts->count()>0){
-            if($lastCartProduct->product->b_product_id == null && $currentCartProduct->b_product_id != null){
-                foreach($cartProducts as $cart){
-                    $cart->delete();
+            //Check Previos Cart Product Type...
+            $ip_address = $request->ip();
+            $cartProducts = Cart::where('ip_address', $ip_address)->get();
+            $lastCartProduct = Cart::where('ip_address', $ip_address)->with('product')->orderBy('id', 'desc')->first();
+            $currentCartProduct = Product::find($id);
+
+            if(!$currentCartProduct){
+                if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Product not found!'
+                    ], 404);
+                }
+                return redirect()->back()->withError('Product not found!');
+            }
+
+            if($cartProducts->count()>0 && $lastCartProduct){
+                if($lastCartProduct->product->b_product_id == null && $currentCartProduct->b_product_id != null){
+                    foreach($cartProducts as $cart){
+                        $cart->delete();
+                    }
+                }
+                elseif($lastCartProduct->product->b_product_id != null && $currentCartProduct->b_product_id == null){
+                    foreach($cartProducts as $cart){
+                        $cart->delete();
+                    }
                 }
             }
-            elseif($lastCartProduct->product->b_product_id != null && $currentCartProduct->b_product_id == null){
-                foreach($cartProducts as $cart){
-                    $cart->delete();
+            //Check Previos Cart Product Type...
+
+            $oldCartProduct = Cart::where('product_id', $currentCartProduct->id)->where('ip_address', $ip_address)->first();
+
+            $action = $request->input('action');
+            if($action === 'addToCart'){
+                if ($oldCartProduct){
+                    $oldCartProduct->qty = $oldCartProduct->qty + $request->qty;
+                    $oldCartProduct->price += $request->price * $request->qty;
+                    $oldCartProduct->save();
                 }
-            }
-        }
-        //Check Previos Cart Product Type...
-
-        $oldCartProduct = Cart::where('product_id', $currentCartProduct->id)->where('ip_address', $ip_address)->first();
-
-        $action = $request->input('action');
-        if($action === 'addToCart'){
-            if ($oldCartProduct){
-                $oldCartProduct->qty = $oldCartProduct->qty + $request->qty;
-                $oldCartProduct->price += $request->price * $request->qty;
-                $oldCartProduct->save();
-            }
-            else
-            {
-                if (auth()->check()){
-                    $cartProduct = new Cart();
-                    $cartProduct->product_id = $request->product_id;
-                    $cartProduct->user_id = auth()->user()->id;
-                    $cartProduct->qty = $request->qty;
-                    $cartProduct->color = $request->color;
-                    $cartProduct->size = $request->size;
-                    $cartProduct->price = $request->price * $request->qty;
-                    $cartProduct->save();
-                }else{
-                    $cartProduct = new Cart();
-                    $cartProduct->product_id = $request->product_id;
-                    $cartProduct->ip_address = $request->ip();
-                    $cartProduct->qty = $request->qty;
-                    $cartProduct->color = $request->color;
-                    $cartProduct->size = $request->size;
-                    $cartProduct->price = $request->price * $request->qty;
-                    $cartProduct->save();
+                else
+                {
+                    if (auth()->check()){
+                        $cartProduct = new Cart();
+                        $cartProduct->product_id = $request->product_id;
+                        $cartProduct->user_id = auth()->user()->id;
+                        $cartProduct->qty = $request->qty;
+                        $cartProduct->color = $request->input('color', null);
+                        $cartProduct->size = $request->input('size', null);
+                        $cartProduct->price = $request->price * $request->qty;
+                        $cartProduct->save();
+                    }else{
+                        $cartProduct = new Cart();
+                        $cartProduct->product_id = $request->product_id;
+                        $cartProduct->ip_address = $request->ip();
+                        $cartProduct->qty = $request->qty;
+                        $cartProduct->color = $request->input('color', null);
+                        $cartProduct->size = $request->input('size', null);
+                        $cartProduct->price = $request->price * $request->qty;
+                        $cartProduct->save();
+                    }
                 }
+
+                // Check if this is an AJAX request
+                if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Product added to cart successfully!',
+                        'cartCount' => Cart::where(function($q) use ($ip_address) {
+                            $q->where('ip_address', $ip_address);
+                            if (auth()->check()) {
+                                $q->orWhere('user_id', auth()->user()->id);
+                            }
+                        })->sum('qty')
+                    ]);
+                }
+
+                return redirect()->back()->with('success', 'Added to cart!');
             }
 
-            // Check if this is an AJAX request
+            else{
+                if ($oldCartProduct){
+                    $oldCartProduct->qty = $oldCartProduct->qty + $request->qty;
+                    $oldCartProduct->price += $request->price * $request->qty;
+                    $oldCartProduct->save();
+                }
+                else
+                {
+                    if (auth()->check()){
+                        $cartProduct = new Cart();
+                        $cartProduct->product_id = $request->product_id;
+                        $cartProduct->user_id = auth()->user()->id;
+                        $cartProduct->qty = $request->qty;
+                        $cartProduct->color = $request->input('color', null);
+                        $cartProduct->size = $request->input('size', null);
+                        $cartProduct->price = $request->price * $request->qty;
+                        $cartProduct->save();
+                    }else{
+                        $cartProduct = new Cart();
+                        $cartProduct->product_id = $request->product_id;
+                        $cartProduct->ip_address = $request->ip();
+                        $cartProduct->qty = $request->qty;
+                        $cartProduct->color = $request->input('color', null);
+                        $cartProduct->size = $request->input('size', null);
+                        $cartProduct->price = $request->price * $request->qty;
+                        $cartProduct->save();
+                    }
+                }
+
+                return redirect('/checkout')->with('success', 'Added to cart!');
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
             if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Product added to cart successfully!',
-                    'cartCount' => Cart::where(function($q) use ($ip_address) {
-                        $q->where('ip_address', $ip_address);
-                        if (auth()->check()) {
-                            $q->orWhere('user_id', auth()->user()->id);
-                        }
-                    })->sum('qty')
-                ]);
+                    'success' => false,
+                    'message' => 'Validation error: ' . implode(', ', array_reduce($e->validator->errors()->all(), function($carry, $item) {
+                        $carry[] = $item;
+                        return $carry;
+                    }, []))
+                ], 422);
             }
-
-            return redirect()->back()->with('success', 'Added to cart!');
-        }
-
-        else{
-            if ($oldCartProduct){
-                $oldCartProduct->qty = $oldCartProduct->qty + $request->qty;
-                $oldCartProduct->price += $request->price * $request->qty;
-                $oldCartProduct->save();
+            return redirect()->back()->withErrors($e->validator);
+        } catch (\Exception $e) {
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error adding product to cart: ' . $e->getMessage()
+                ], 500);
             }
-            else
-            {
-                if (auth()->check()){
-                    $cartProduct = new Cart();
-                    $cartProduct->product_id = $request->product_id;
-                    $cartProduct->user_id = auth()->user()->id;
-                    $cartProduct->qty = $request->qty;
-                    $cartProduct->color = $request->color;
-                    $cartProduct->size = $request->size;
-                    $cartProduct->price = $request->price * $request->qty;
-                    $cartProduct->save();
-                }else{
-                    $cartProduct = new Cart();
-                    $cartProduct->product_id = $request->product_id;
-                    $cartProduct->ip_address = $request->ip();
-                    $cartProduct->qty = $request->qty;
-                    $cartProduct->color = $request->color;
-                    $cartProduct->size = $request->size;
-                    $cartProduct->price = $request->price * $request->qty;
-                    $cartProduct->save();
-                }
-            }
-
-            return redirect('/checkout')->with('success', 'Added to cart!');
+            return redirect()->back()->withError('Error adding to cart: ' . $e->getMessage());
         }
     }
 

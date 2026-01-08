@@ -251,7 +251,7 @@
     </div>
     <div style="display: none">
         <input type="text" id="product_name" value="{{ $details->name }}">
-        <input type="text" id="price" value="{{ $details->regular_price }}">
+        <input type="text" id="price" value="{{ isset($details->discount_price) && $details->discount_price ? $details->discount_price : $details->regular_price }}">
         <input type="text" id="product_id" value="{{ $details->id }}">
         <input type="text" id="category" value="{{ $details->category->name }}">
     </div>
@@ -355,6 +355,8 @@
         // Get form data
         var formData = new FormData(document.getElementById('addToCartForm'));
 
+        console.log('Form data being sent:', Object.fromEntries(formData));
+
         // Send AJAX request
         fetch('/add/to/cart/details/page/' + product_id, {
             method: 'POST',
@@ -363,8 +365,12 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
             if (data.success) {
                 btnText.textContent = 'Added to Cart ✓';
                 cartBtn.style.backgroundColor = '#28a745';
@@ -386,7 +392,7 @@
             console.error('Error:', error);
             btnText.textContent = 'Add to Cart';
             cartBtn.disabled = false;
-            showNotification('Error adding to cart. Please try again.', 'error');
+            showNotification('Error adding to cart: ' + error.message, 'error');
         });
     }
 
